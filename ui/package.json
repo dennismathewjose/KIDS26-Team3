@@ -1,0 +1,16 @@
+{
+  "name": "rag-pdf",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "langchain": "^1.5.11",
+    "multer": "^2.3.0",
+    "pdf-parse": "^2.4.5"
+  }
+}

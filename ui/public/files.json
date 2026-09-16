@@ -1,0 +1,26 @@
+{
+    "folders": [
+        {
+            "nbl": [
+                {
+                    "input_filename": "example.pdf",
+                    "input_run_id": "example_run_id",
+                    "validation_file_dir": "example_validation_dir",
+                    "output_file_dir": "example_output_dir",
+                    "audit_timestamp": "2024-06-05T12:00:00Z",
+                    "url": "https://example.com/example.pdf",
+                    "run_status": "successful"
+                },
+                {
+                    "input_filename": "example2.pdf",
+                    "input_run_id": "example2_run_id",
+                    "validation_file_dir": "example2_validation_dir",
+                    "output_file_dir": "example2_output_dir",
+                    "audit_timestamp": "2024-06-05T12:00:00Z",
+                    "url": "https://example.com/example2.pdf",
+                    "run_status": "successful"
+                }
+            ]
+        }
+    ]
+}
