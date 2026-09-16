@@ -18,9 +18,9 @@ app.use(express.json());
 app.use(express.static("public"));
 
 const upload = multer({ dest: "uploads/" });
-const externalPdfApiUrl = process.env.EXTERNAL_PDF_API_URL;
-const externalPdfApiKey = process.env.EXTERNAL_PDF_API_KEY;
-const externalPdfField = process.env.EXTERNAL_PDF_FIELD || "pdf";
+const externalApiUrl = process.env.EXTERNAL_API_URL;
+const externalApiKey = process.env.EXTERNAL_API_KEY;
+const externalAField = process.env.EXTERNAL_FIELD || "api";
 
 async function removeUploadedFiles(files) {
   await Promise.all(
@@ -51,7 +51,7 @@ function getReceivedFiles(responseBody) {
   });
 }
 
-app.post("/upload", upload.array("pdf", 20), async (req, res) => {
+app.post("/upload", upload.array("api", 20), async (req, res) => {
   const uploadedFiles = req.files || [];
 
   try {
@@ -59,10 +59,10 @@ app.post("/upload", upload.array("pdf", 20), async (req, res) => {
       return res.status(400).json({ error: "No files uploaded" });
     }
 
-    if (!externalPdfApiUrl) {
+    if (!externalApiUrl) {
       await removeUploadedFiles(uploadedFiles);
       return res.status(503).json({
-        error: "External PDF API is not configured. Set EXTERNAL_PDF_API_URL.",
+        error: "External API is not configured. Set EXTERNAL_API_URL.",
       });
     }
 
@@ -70,20 +70,20 @@ app.post("/upload", upload.array("pdf", 20), async (req, res) => {
     for (const file of uploadedFiles) {
       const fileBuffer = await fs.promises.readFile(file.path);
       formData.append(
-        externalPdfField,
+        externalApiField,
         new Blob([fileBuffer], { type: file.mimetype || "application/octet-stream" }),
         file.originalname
       );
     }
 
-    const headers = externalPdfApiKey
-      ? { Authorization: `Bearer ${externalPdfApiKey}` }
+    const headers = externalApiKey
+      ? { Authorization: `Bearer ${externalApiKey}` }
       : undefined;
 
     console.log(
-      `📤 Forwarding ${uploadedFiles.length} document(s) to ${externalPdfApiUrl}`
+      `📤 Forwarding ${uploadedFiles.length} document(s) to ${externalApiUrl}`
     );
-    const externalResponse = await fetch(externalPdfApiUrl, {
+    const externalResponse = await fetch(externalApiUrl, {
       method: "POST",
       headers,
       body: formData,
@@ -100,7 +100,7 @@ app.post("/upload", upload.array("pdf", 20), async (req, res) => {
     if (!externalResponse.ok) {
       await removeUploadedFiles(uploadedFiles);
       return res.status(502).json({
-        error: "External PDF API rejected the upload.",
+        error: "External API rejected the upload.",
         details: responseBody,
       });
     }
@@ -116,7 +116,7 @@ app.post("/upload", upload.array("pdf", 20), async (req, res) => {
   } catch (err) {
     await removeUploadedFiles(uploadedFiles);
     console.error("❌ External upload error:", err.message);
-    res.status(502).json({ error: "Failed to forward PDFs to external API" });
+    res.status(502).json({ error: "Failed to forward docs to external API" });
   }
 });
 
@@ -124,5 +124,5 @@ const port = process.env.PORT || 8080;
 
 app.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);
-  console.log("📌 POST /upload  → Upload PDF");
+  console.log("📌 POST /upload  → Upload doc");
 });
