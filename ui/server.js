@@ -7,7 +7,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-console.log("🚀 Starting RAG PDF Server...");
+console.log("🚀 Starting UI Server...");
 
 const __filename = fileURLToPath(import.meta.url);
 
