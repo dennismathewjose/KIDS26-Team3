@@ -1,0 +1,10 @@
+.gradle/
+build/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
+.idea/
+*.iml
+.vscode/
+.env
+!.env.example
+local.properties

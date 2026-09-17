@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: aria-template-api
+  # Local-only overrides; parsed as a properties file and ignored when absent.
+  config:
+    import: "optional:file:./.env[.properties]"
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+server:
+  port: 80
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+azure:
+  storage:
+    # Endpoint is derived from account-name when left blank.
+    account-name: ${AZURE_STORAGE_ACCOUNT_NAME:}
+    account-key: ${AZURE_STORAGE_ACCOUNT_KEY:}
+    endpoint: ${AZURE_STORAGE_ENDPOINT:}
+    # Alias used when a request omits the container parameter.
+    default-container: input
+    containers:
+      input:
+        name: ${AZURE_INPUT_CONTAINER_NAME:inputcontainer}
+        auto-timestamp-folder: true
+      output:
+        name: ${AZURE_OUTPUT_CONTAINER_NAME:outputcontainer}
+      staging:
+        name: ${AZURE_STAGING_CONTAINER_NAME:stagingcontainer}
+
+logging:
+  level:
+    com.azure.core: WARN
