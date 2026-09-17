@@ -30,7 +30,7 @@ import java.util.Map;
 @Validated
 public class BlobStorageController {
 
-    private static final int MIN_BATCH_FILES = 3;
+    private static final int MIN_BATCH_FILES = 2;
 
     private final BlobStorageService blobStorageService;
 
