@@ -1,0 +1,44 @@
+name: Build and Push to ACR
+
+on:
+  push:
+    branches:
+      - main # Triggers the workflow on push to the main branch
+    paths:
+      - 'ui/**'
+
+env:
+    IMAGE_NAME: aria-ai-templates-ui
+    SUBFOLDER_PATH: ui
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Check out the repository code
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    # 2. Set up Docker Buildx (highly recommended for building images)
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # 3. Log in to Azure Container Registry
+    - name: Log in to ACR
+      uses: azure/docker-login@v2
+      with:
+        login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+
+    # 4. Build the Docker image and push it to ACR
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: ./${{ env.SUBFOLDER_PATH }}
+        file: ./${{ env.SUBFOLDER_PATH }}/Dockerfile
+        push: true
+        tags: |
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
