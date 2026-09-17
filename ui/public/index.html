@@ -307,16 +307,8 @@
 
 <h1>📄 ARIA AI Template</h1>
 
-<section class="file-browser" aria-labelledby="file-browser-title">
-  <div class="file-browser-header">
-    <h2 id="file-browser-title">Files</h2>
-    <span class="tree-status" id="treeStatus">Loading...</span>
-  </div>
-  <div class="file-tree" id="fileTree" aria-live="polite"></div>
-</section>
-
 <div class="upload-section">
-  <input type="file" id="pdfFile" accept=".pdf, .doc, .docx, .txt" multiple/>
+  <input type="file" id="uploaded_file" accept=".pdf, .doc, .docx, .txt" multiple/>
   <div class="drop-zone" id="dropZone">
     Drop DOC, DOCX, PDF, or TXT files here or click to choose files
   </div>
@@ -334,14 +326,22 @@
 <div id="uploadStatus"></div>
 <ul id="receivedFiles" hidden></ul>
 
+<section class="file-browser" aria-labelledby="file-browser-title">
+  <div class="file-browser-header">
+    <h2 id="file-browser-title">Files</h2>
+    <span class="tree-status" id="treeStatus">Loading...</span>
+  </div>
+  <div class="file-tree" id="fileTree" aria-live="polite"></div>
+</section>
+
 <script>
-  const fileInput = document.getElementById("pdfFile");
+  const fileInput = document.getElementById("uploaded_file");
   const dropZone = document.getElementById("dropZone");
   const selectedFilesList = document.getElementById("selectedFiles");
   const supportedExtensions = [".doc", ".docx", ".pdf", ".txt"];
   let selectedFiles = [];
 
-  function createTreeRow(icon, label, className, onClick, metadata = "", status = "") {
+  function createTreeRow(icon, label, className, onClick, metadata = "", status = "", href = "") {
     const row = document.createElement(onClick ? "button" : "div");
     row.className = `tree-row ${className}`;
     if (onClick) {
@@ -354,9 +354,14 @@
     iconElement.textContent = icon;
     row.appendChild(iconElement);
 
-    const labelElement = document.createElement("span");
+    const labelElement = href ? document.createElement("a") : document.createElement("span");
     labelElement.className = className === "file-row" ? "file-name" : "folder-name";
     labelElement.textContent = label;
+    if (href) {
+      labelElement.href = href;
+      labelElement.target = "_blank";
+      labelElement.rel = "noopener noreferrer";
+    }
     row.appendChild(labelElement);
 
     if (metadata) {
@@ -380,66 +385,64 @@
     return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
   }
 
-  function renderFolder(folderName, entries) {
+  function renderFile(file) {
+    const fileItem = document.createElement("li");
+    const fileRow = createTreeRow(
+      "▫",
+      file.fileName || "Unnamed file",
+      "file-row",
+      null,
+      formatFileDate(file.timeCreated),
+      "",
+      file.filePath || ""
+    );
+
+    fileItem.appendChild(fileRow);
+    return fileItem;
+  }
+
+  function renderFileGroup(groupName, files) {
     const item = document.createElement("li");
     const children = document.createElement("ul");
     children.className = "tree-list";
 
-    const folderRow = createTreeRow("▾", folderName, "folder-row", () => {
+    const groupRow = createTreeRow("▾", `${groupName} (${files.length})`, "folder-row", () => {
+      const isOpen = !children.hidden;
+      children.hidden = isOpen;
+      groupRow.querySelector(".tree-icon").textContent = isOpen ? "▸" : "▾";
+    });
+
+    if (files.length) {
+      for (const file of files) {
+        children.appendChild(renderFile(file));
+      }
+    } else {
+      const emptyItem = document.createElement("li");
+      emptyItem.className = "tree-empty";
+      emptyItem.textContent = "No files";
+      children.appendChild(emptyItem);
+    }
+
+    item.append(groupRow, children);
+    return item;
+  }
+
+  function renderFolder(folder) {
+    const item = document.createElement("li");
+    const children = document.createElement("ul");
+    children.className = "tree-list";
+
+    const inputFiles = Array.isArray(folder.inputfiles) ? folder.inputfiles : [];
+    const outputFiles = Array.isArray(folder.outputfiles) ? folder.outputfiles : [];
+    const folderRow = createTreeRow("▾", folder.folderName || "Unnamed folder", "folder-row", () => {
       const isOpen = !children.hidden;
       children.hidden = isOpen;
       folderRow.querySelector(".tree-icon").textContent = isOpen ? "▸" : "▾";
-    });
+    }, formatFileDate(folder.folderdate), `${inputFiles.length + outputFiles.length} file(s)`);
     item.append(folderRow, children);
 
-    for (const entry of entries) {
-      const fileItem = document.createElement("li");
-      const attributes = document.createElement("ul");
-      attributes.className = "file-attributes";
-      attributes.hidden = true;
-
-      const fileRow = createTreeRow(
-        "▫",
-        entry.input_filename || "Unnamed file",
-        "file-row",
-        () => {
-          attributes.hidden = !attributes.hidden;
-          fileRow.querySelector(".tree-icon").textContent = attributes.hidden ? "▫" : "▪";
-        },
-        formatFileDate(entry.audit_timestamp),
-        entry.run_status
-      );
-
-      for (const [key, value] of Object.entries(entry)) {
-        const attribute = document.createElement("li");
-        attribute.className = "file-attribute";
-
-        const keyElement = document.createElement("span");
-        keyElement.className = "attribute-key";
-        keyElement.textContent = key;
-
-        const valueElement = document.createElement("span");
-        valueElement.className = "attribute-value";
-        if (key === "url" && typeof value === "string") {
-          const link = document.createElement("a");
-          link.href = value;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = value;
-          valueElement.appendChild(link);
-        } else if (value && typeof value === "object") {
-          valueElement.textContent = JSON.stringify(value);
-        } else {
-          valueElement.textContent = String(value ?? "");
-        }
-
-        attribute.append(keyElement, valueElement);
-        attributes.appendChild(attribute);
-      }
-
-      fileItem.append(fileRow, attributes);
-      children.appendChild(fileItem);
-    }
+    children.appendChild(renderFileGroup("Input files", inputFiles));
+    children.appendChild(renderFileGroup("Output files", outputFiles));
     return item;
   }
 
@@ -449,16 +452,16 @@
     tree.replaceChildren();
     const treeList = document.createElement("ul");
     treeList.className = "tree-list";
+    const folders = Array.isArray(fileData) ? fileData : [];
     let folderCount = 0;
     let fileCount = 0;
 
-    for (const folder of fileData.folders || []) {
-      for (const [folderName, files] of Object.entries(folder)) {
-        const entries = Array.isArray(files) ? files : [];
-        folderCount += 1;
-        fileCount += entries.length;
-        treeList.appendChild(renderFolder(folderName, entries));
-      }
+    for (const folder of folders) {
+      const inputFiles = Array.isArray(folder.inputfiles) ? folder.inputfiles : [];
+      const outputFiles = Array.isArray(folder.outputfiles) ? folder.outputfiles : [];
+      folderCount += 1;
+      fileCount += inputFiles.length + outputFiles.length;
+      treeList.appendChild(renderFolder(folder));
     }
 
     if (!folderCount) {
@@ -472,12 +475,12 @@
 
   async function loadFileTree() {
     try {
-      const response = await fetch("/files.json");
+      const response = await fetch("/files");
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       renderFileTree(await response.json());
     } catch (error) {
       document.getElementById("fileTree").innerHTML =
-        '<div class="tree-error">Unable to load files.json.</div>';
+        '<div class="tree-error">Unable to load folder contents.</div>';
       document.getElementById("treeStatus").textContent = "Unavailable";
     }
   }
@@ -556,7 +559,7 @@
 
     const formData = new FormData();
     for (const file of selectedFiles) {
-      formData.append("pdf", file);
+      formData.append("file", file);
     }
 
     try {
@@ -569,9 +572,10 @@
       if (res.ok) {
         statusDiv.style.color = "green";
         statusDiv.textContent = data.message || "✅ Upload complete.";
-        showReceivedFiles(data.receivedFiles);
+        // showReceivedFiles(data.receivedFiles);
         selectedFiles = [];
-        renderSelectedFiles();
+        // renderSelectedFiles();
+        loadFileTree()
       } else {
         statusDiv.style.color = "red";
         statusDiv.textContent = "❌ " + data.error;

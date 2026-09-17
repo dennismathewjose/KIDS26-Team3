@@ -1,26 +1,290 @@
-{
-    "folders": [
-        {
-            "nbl": [
-                {
-                    "input_filename": "example.pdf",
-                    "input_run_id": "example_run_id",
-                    "validation_file_dir": "example_validation_dir",
-                    "output_file_dir": "example_output_dir",
-                    "audit_timestamp": "2024-06-05T12:00:00Z",
-                    "url": "https://example.com/example.pdf",
-                    "run_status": "successful"
-                },
-                {
-                    "input_filename": "example2.pdf",
-                    "input_run_id": "example2_run_id",
-                    "validation_file_dir": "example2_validation_dir",
-                    "output_file_dir": "example2_output_dir",
-                    "audit_timestamp": "2024-06-05T12:00:00Z",
-                    "url": "https://example.com/example2.pdf",
-                    "run_status": "successful"
-                }
-            ]
-        }
-    ]
-}
+[
+    {
+        "folderName": "20260917_1789675465445",
+        "folderdate": "2026-09-17T20:04:26Z",
+        "inputfiles": [
+            {
+                "fileName": "remote-batch-alpha_1789675465445.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675465445%2Fremote-batch-alpha_1789675465445.txt",
+                "timeCreated": "2026-09-17T20:04:25Z"
+            },
+            {
+                "fileName": "remote-batch-beta_1789675465445.csv",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675465445%2Fremote-batch-beta_1789675465445.csv",
+                "timeCreated": "2026-09-17T20:04:26Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789675331235",
+        "folderdate": "2026-09-17T20:02:12Z",
+        "inputfiles": [
+            {
+                "fileName": "Test doc 1_1789675331235.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675331235%2FTest%20doc%201_1789675331235.docx",
+                "timeCreated": "2026-09-17T20:02:12Z"
+            },
+            {
+                "fileName": "Test doc 2_1789675331235.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675331235%2FTest%20doc%202_1789675331235.docx",
+                "timeCreated": "2026-09-17T20:02:12Z"
+            },
+            {
+                "fileName": "Test doc 3_1789675331235.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675331235%2FTest%20doc%203_1789675331235.docx",
+                "timeCreated": "2026-09-17T20:02:12Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789675129538",
+        "folderdate": "2026-09-17T19:58:49Z",
+        "inputfiles": [
+            {
+                "fileName": "Test doc 1_1789675129538.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675129538%2FTest%20doc%201_1789675129538.docx",
+                "timeCreated": "2026-09-17T19:58:49Z"
+            },
+            {
+                "fileName": "Test doc 2_1789675129538.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675129538%2FTest%20doc%202_1789675129538.docx",
+                "timeCreated": "2026-09-17T19:58:49Z"
+            },
+            {
+                "fileName": "Test doc 3_1789675129538.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675129538%2FTest%20doc%203_1789675129538.docx",
+                "timeCreated": "2026-09-17T19:58:49Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789674960179",
+        "folderdate": "2026-09-17T19:56:00Z",
+        "inputfiles": [
+            {
+                "fileName": "Test doc 1_1789674960179.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674960179%2FTest%20doc%201_1789674960179.docx",
+                "timeCreated": "2026-09-17T19:56:00Z"
+            },
+            {
+                "fileName": "Test doc 2_1789674960179.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674960179%2FTest%20doc%202_1789674960179.docx",
+                "timeCreated": "2026-09-17T19:56:00Z"
+            },
+            {
+                "fileName": "Test doc 3_1789674960179.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674960179%2FTest%20doc%203_1789674960179.docx",
+                "timeCreated": "2026-09-17T19:56:00Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789674831193",
+        "folderdate": "2026-09-17T19:53:51Z",
+        "inputfiles": [
+            {
+                "fileName": "Test doc 1_1789674831193.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674831193%2FTest%20doc%201_1789674831193.docx",
+                "timeCreated": "2026-09-17T19:53:51Z"
+            },
+            {
+                "fileName": "Test doc 2_1789674831193.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674831193%2FTest%20doc%202_1789674831193.docx",
+                "timeCreated": "2026-09-17T19:53:51Z"
+            },
+            {
+                "fileName": "Test doc 3_1789674831193.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674831193%2FTest%20doc%203_1789674831193.docx",
+                "timeCreated": "2026-09-17T19:53:51Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789674619809",
+        "folderdate": "2026-09-17T19:50:22Z",
+        "inputfiles": [
+            {
+                "fileName": "local-batch-alpha_1789674619809.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674619809%2Flocal-batch-alpha_1789674619809.txt",
+                "timeCreated": "2026-09-17T19:50:22Z"
+            },
+            {
+                "fileName": "local-batch-beta_1789674619809.csv",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674619809%2Flocal-batch-beta_1789674619809.csv",
+                "timeCreated": "2026-09-17T19:50:22Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789674194527",
+        "folderdate": "2026-09-17T19:43:15Z",
+        "inputfiles": [
+            {
+                "fileName": "Test doc 1_1789674194527.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674194527%2FTest%20doc%201_1789674194527.docx",
+                "timeCreated": "2026-09-17T19:43:15Z"
+            },
+            {
+                "fileName": "Test doc 2_1789674194527.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674194527%2FTest%20doc%202_1789674194527.docx",
+                "timeCreated": "2026-09-17T19:43:15Z"
+            },
+            {
+                "fileName": "Test doc 3_1789674194527.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789674194527%2FTest%20doc%203_1789674194527.docx",
+                "timeCreated": "2026-09-17T19:43:15Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789673008028",
+        "folderdate": "2026-09-17T19:23:28Z",
+        "inputfiles": [
+            {
+                "fileName": "Test doc 1_1789673008028.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789673008028%2FTest%20doc%201_1789673008028.docx",
+                "timeCreated": "2026-09-17T19:23:28Z"
+            },
+            {
+                "fileName": "Test doc 2_1789673008028.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789673008028%2FTest%20doc%202_1789673008028.docx",
+                "timeCreated": "2026-09-17T19:23:28Z"
+            },
+            {
+                "fileName": "Test doc 3_1789673008028.docx",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789673008028%2FTest%20doc%203_1789673008028.docx",
+                "timeCreated": "2026-09-17T19:23:28Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789672126811",
+        "folderdate": "2026-09-17T19:08:47Z",
+        "inputfiles": [
+            {
+                "fileName": "appservice-batch-alpha_1789672126811.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789672126811%2Fappservice-batch-alpha_1789672126811.txt",
+                "timeCreated": "2026-09-17T19:08:47Z"
+            },
+            {
+                "fileName": "appservice-batch-beta_1789672126811.csv",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789672126811%2Fappservice-batch-beta_1789672126811.csv",
+                "timeCreated": "2026-09-17T19:08:47Z"
+            },
+            {
+                "fileName": "appservice-batch-gamma_1789672126811.json",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789672126811%2Fappservice-batch-gamma_1789672126811.json",
+                "timeCreated": "2026-09-17T19:08:47Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260917_1789658377092",
+        "folderdate": "2026-09-17T15:19:37Z",
+        "inputfiles": [
+            {
+                "fileName": "upload-batch-alpha_1789658377092.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789658377092%2Fupload-batch-alpha_1789658377092.txt",
+                "timeCreated": "2026-09-17T15:19:37Z"
+            },
+            {
+                "fileName": "upload-batch-beta_1789658377092.csv",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789658377092%2Fupload-batch-beta_1789658377092.csv",
+                "timeCreated": "2026-09-17T15:19:37Z"
+            },
+            {
+                "fileName": "upload-batch-gamma_1789658377092.json",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789658377092%2Fupload-batch-gamma_1789658377092.json",
+                "timeCreated": "2026-09-17T15:19:37Z"
+            }
+        ],
+        "outputfiles": [
+            {
+                "fileName": "faq.html",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallmoutput/20260917_1789658377092%2Ffaq.html",
+                "timeCreated": "2026-09-17T15:23:44Z"
+            }
+        ]
+    },
+    {
+        "folderName": "20260917_1789608453379",
+        "folderdate": "2026-09-17T01:27:35Z",
+        "inputfiles": [
+            {
+                "fileName": "batch-one_1789608453379.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789608453379%2Fbatch-one_1789608453379.txt",
+                "timeCreated": "2026-09-17T01:27:35Z"
+            },
+            {
+                "fileName": "batch-three_1789608453379.json",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789608453379%2Fbatch-three_1789608453379.json",
+                "timeCreated": "2026-09-17T01:27:35Z"
+            },
+            {
+                "fileName": "batch-two_1789608453379.csv",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789608453379%2Fbatch-two_1789608453379.csv",
+                "timeCreated": "2026-09-17T01:27:35Z"
+            }
+        ],
+        "outputfiles": [
+            {
+                "fileName": "requirements.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallmoutput/20260917_1789608453379%2Frequirements.txt",
+                "timeCreated": "2026-09-17T01:45:54Z"
+            }
+        ]
+    },
+    {
+        "folderName": "20260916_1789593942071",
+        "folderdate": "2026-09-16T21:25:42Z",
+        "inputfiles": [
+            {
+                "fileName": "metadata_1789593942071.json",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260916_1789593942071%2Fmetadata_1789593942071.json",
+                "timeCreated": "2026-09-16T21:25:42Z"
+            },
+            {
+                "fileName": "overview_1789593942071.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260916_1789593942071%2Foverview_1789593942071.txt",
+                "timeCreated": "2026-09-16T21:25:42Z"
+            },
+            {
+                "fileName": "results_1789593942071.csv",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260916_1789593942071%2Fresults_1789593942071.csv",
+                "timeCreated": "2026-09-16T21:25:42Z"
+            }
+        ],
+        "outputfiles": []
+    },
+    {
+        "folderName": "20260916_1789593829181",
+        "folderdate": "2026-09-16T21:23:49Z",
+        "inputfiles": [
+            {
+                "fileName": "data_1789593829181.csv",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260916_1789593829181%2Fdata_1789593829181.csv",
+                "timeCreated": "2026-09-16T21:23:49Z"
+            },
+            {
+                "fileName": "notes_1789593829181.txt",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260916_1789593829181%2Fnotes_1789593829181.txt",
+                "timeCreated": "2026-09-16T21:23:49Z"
+            },
+            {
+                "fileName": "request_1789593829181.json",
+                "filePath": "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260916_1789593829181%2Frequest_1789593829181.json",
+                "timeCreated": "2026-09-16T21:23:49Z"
+            }
+        ],
+        "outputfiles": []
+    }
+]

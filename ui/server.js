@@ -4,13 +4,8 @@ import express from "express";
 import multer from "multer";
 import cors from "cors";
 import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 
 console.log("🚀 Starting UI Server...");
-
-const __filename = fileURLToPath(import.meta.url);
-
 
 const app = express();
 app.use(cors());
@@ -18,9 +13,16 @@ app.use(express.json());
 app.use(express.static("public"));
 
 const upload = multer({ dest: "uploads/" });
-const externalApiUrl = process.env.EXTERNAL_API_URL;
-const externalApiKey = process.env.EXTERNAL_API_KEY;
-const externalAField = process.env.EXTERNAL_FIELD || "api";
+const externalApiUrl = process.env.EXTERNAL_API_URL?.trim();
+const externalApiFoldersPath = process.env.EXTERNAL_API_GET_FOLDERS_CONTENT?.trim();
+const externalApiUploadPath = process.env.EXTERNAL_API_UPLOAD_FILES_BATCH?.trim();
+const FOLDERS_URL = externalApiUrl && externalApiFoldersPath
+  ? new URL(externalApiFoldersPath, `${externalApiUrl}/`).toString()
+  : null;
+const UPLOAD_URL = externalApiUrl && externalApiUploadPath
+  ? new URL(externalApiUploadPath, `${externalApiUrl}/`).toString()
+  : null;
+const externalApiField = process.env.EXTERNAL_FIELD || "files";
 
 async function removeUploadedFiles(files) {
   await Promise.all(
@@ -51,7 +53,47 @@ function getReceivedFiles(responseBody) {
   });
 }
 
-app.post("/upload", upload.array("api", 20), async (req, res) => {
+app.get("/files", async (req, res) => {
+  if (!FOLDERS_URL) {
+    return res.status(503).json({
+      error: "External API is not configured. Set EXTERNAL_API_URL and EXTERNAL_API_GET_FOLDERS_CONTENT.",
+    });
+  }
+
+  try {
+    const externalResponse = await fetch(FOLDERS_URL);
+    const responseText = await externalResponse.text();
+    let responseBody;
+
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = { response: responseText };
+    }
+
+    if (!externalResponse.ok) {
+      return res.status(502).json({
+        error: "External API rejected the folder content request.",
+        details: responseBody,
+      });
+    }
+    console.log(`📥 Fetched folder contents from ${FOLDERS_URL}`);
+    console.log(responseBody);
+    res.status(externalResponse.status).json(responseBody);
+  } catch (err) {
+    console.error("❌ External folders error:", err.message);
+    res.status(502).json({ error: "Failed to fetch folder contents" });
+  }
+});
+
+app.post("/upload", (req, res, next) => {
+  upload.array("file", 2)(req, res, (error) => {
+    if (error) {
+      return res.status(400).json({ error: `Upload rejected: ${error.message}` });
+    }
+    next();
+  });
+}, async (req, res) => {
   const uploadedFiles = req.files || [];
 
   try {
@@ -59,10 +101,10 @@ app.post("/upload", upload.array("api", 20), async (req, res) => {
       return res.status(400).json({ error: "No files uploaded" });
     }
 
-    if (!externalApiUrl) {
+    if (!UPLOAD_URL) {
       await removeUploadedFiles(uploadedFiles);
       return res.status(503).json({
-        error: "External API is not configured. Set EXTERNAL_API_URL.",
+        error: "External API is not configured. Set EXTERNAL_API_URL and EXTERNAL_API_UPLOAD_FILES_BATCH.",
       });
     }
 
@@ -76,16 +118,11 @@ app.post("/upload", upload.array("api", 20), async (req, res) => {
       );
     }
 
-    const headers = externalApiKey
-      ? { Authorization: `Bearer ${externalApiKey}` }
-      : undefined;
-
     console.log(
-      `📤 Forwarding ${uploadedFiles.length} document(s) to ${externalApiUrl}`
+      `📤 Forwarding ${uploadedFiles.length} document(s) to ${UPLOAD_URL}`
     );
-    const externalResponse = await fetch(externalApiUrl, {
+    const externalResponse = await fetch(UPLOAD_URL, {
       method: "POST",
-      headers,
       body: formData,
     });
 
@@ -116,6 +153,7 @@ app.post("/upload", upload.array("api", 20), async (req, res) => {
   } catch (err) {
     await removeUploadedFiles(uploadedFiles);
     console.error("❌ External upload error:", err.message);
+    console.error("❌ External upload error details:", err);
     res.status(502).json({ error: "Failed to forward docs to external API" });
   }
 });
@@ -124,5 +162,4 @@ const port = process.env.PORT || 8080;
 
 app.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);
-  console.log("📌 POST /upload  → Upload doc");
 });
