@@ -10,8 +10,8 @@ RUN npm ci --omit=dev
 # ---- Runtime stage ----
 FROM node:24.21.0-alpine3.24 AS runtime
 ENV NODE_ENV=production
-# The server reads PORT (defaults to 8080 in server.js)
-ENV PORT=80
+# Keep the app on an unprivileged port so it can run as the non-root node user.
+ENV PORT=8080
 WORKDIR /app
 
 # Bring in the pre-installed production dependencies
@@ -25,6 +25,6 @@ COPY public ./public
 RUN mkdir -p uploads && chown -R node:node /app
 
 USER node
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["node", "server.js"]
