@@ -155,3 +155,10 @@ dmypy.json
 .pyre/
 .myenv/
 requirements.txt
+
+#Testing folder
+dennis/
+# Live API keys — never commit
+config/
+config/config.json
+fewshot.sh
