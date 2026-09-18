@@ -15,26 +15,32 @@
 # without --force.
 #
 #
-# WHY NO STORAGE KEY IS INSTALLED
-# -------------------------------
-# The VM authenticates to Blob Storage as *itself*, via its managed identity, so there is no
-# account key to deploy, rotate, or leak. That is why `.env` is not in git and does not need
-# to be: the only secret this service needs is ARIA_API_KEY, which guards its OWN endpoint,
-# and `setup` generates that here on the VM.
+# CREDENTIAL MODEL (proof of concept)
+# -----------------------------------
+# Managed identity is not being granted, so:
 #
-#   storage credential   -> managed identity, nothing stored
+#   reads                -> ANONYMOUS. Both containers allow public read; verified with a
+#                           plain curl returning HTTP 200 and no credential.
+#   writes               -> AZURE_STORAGE_KEY. Anonymous PUT returns HTTP 401.
 #   AZURE_STORAGE_ACCOUNT-> not a secret; it appears in every job URL
-#   blob URLs            -> arrive in the job payload at runtime
-#   ARIA_API_KEY         -> generated below, chmod 600, never committed
+#   blob URLs            -> arrive in the job payload at runtime, never configured here
+#   ARIA_API_KEY         -> guards THIS service's /jobs endpoint. Generated below.
+#                           NOT the storage key: this one is shared with the web app team.
+#
+# `.env` is generated on the VM, chmod 600, and never committed.
 #
 #
-# THE IDENTITY CHECK IS A HARD GATE
-# ---------------------------------
-# `setup` refuses to continue if the instance metadata service does not hand back a token.
-# Without managed identity the service starts fine and then fails every job ~80 seconds in,
-# after the Azure SDK works through nine credential fallbacks -- a slow, confusing failure
-# that looks like a code bug. Better to stop here with a clear message.
-# Use --skip-identity-check only to inspect a partially provisioned VM.
+# WHAT SETUP REFUSES TO PROCEED WITHOUT
+# -------------------------------------
+# A write credential -- see check_write_credential.
+#
+# Not managed identity: its absence is expected here and is reported for information only.
+# The gate is on the key because reads succeed anonymously, so a missing key lets a job
+# download its inputs, run the whole extraction, and only then fail at the upload. That burns
+# the run and looks like a pipeline bug rather than a configuration one.
+#
+# If an identity is ever assigned, set USE_MANAGED_IDENTITY=1 in .env and remove the key.
+# That path is still in the code and is the better option: no secret on disk.
 
 set -euo pipefail
 
@@ -81,46 +87,84 @@ die()  { printf '  %sFAIL%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 # ───────────────────────────────────────────────────────────────── steps
 
 find_python() {
-    # Prefer the newest explicit 3.x on PATH; fall back to python3.
-    local c best=""
-    for c in python3.13 python3.12 python3.11 python3.10 python3; do
-        command -v "$c" >/dev/null 2>&1 || continue
-        best="$c"; break
-    done
+    # An explicit PYTHON= wins. RHEL/CentOS ship Python 3.6 as the system `python3` and it
+    # cannot be replaced without root, so the practical route on a locked-down VM is a
+    # user-local interpreter (uv or pyenv) pointed at with:
+    #     PYTHON=~/.local/bin/python3.12 ./deploy_vm.sh setup
+    local c best="${PYTHON:-}"
+    if [ -n "$best" ]; then
+        command -v "$best" >/dev/null 2>&1 || die "PYTHON=$best is not executable"
+    else
+        for c in python3.13 python3.12 python3.11 python3.10 python3; do
+            command -v "$c" >/dev/null 2>&1 || continue
+            best="$c"; break
+        done
+    fi
     [ -n "$best" ] || die "no python3 found. Ask Engineer 1/2 to install Python 3.$MIN_PY_MINOR+"
 
     local minor
     minor="$("$best" -c 'import sys; print(sys.version_info[1])')"
     if [ "$("$best" -c 'import sys; print(sys.version_info[0])')" -lt 3 ] \
        || [ "$minor" -lt "$MIN_PY_MINOR" ]; then
-        die "$("$best" --version) is too old; need 3.$MIN_PY_MINOR+. Ask Engineer 1/2 to install it."
+        die "$("$best" --version) is too old; need 3.$MIN_PY_MINOR+.
+
+       RHEL/CentOS ship 3.6 as the system python3. Two ways forward:
+
+       NO ROOT NEEDED -- install a user-local Python with uv:
+           curl -LsSf https://astral.sh/uv/install.sh | sh
+           ~/.local/bin/uv python install 3.12
+           PYTHON=\$(~/.local/bin/uv python find 3.12) $0 setup
+
+       WITH ROOT -- ask Engineer 1/2:
+           sudo dnf install -y python3.12 python3.12-devel   # RHEL/Rocky 8-9
+           then re-run: $0 setup"
     fi
     printf '%s' "$best"
 }
 
 check_identity() {
-    head_ "managed identity"
+    # Advisory only. Managed identity is not being granted for this POC, so its absence is
+    # expected and must not block the deploy. It was a hard gate while identity was the
+    # intended path; now the credential model is:
+    #     reads  -> anonymous, both containers allow public read
+    #     writes -> AZURE_STORAGE_KEY (checked by check_write_credential below)
+    head_ "managed identity (optional)"
     if [ "$SKIP_IDENTITY" = 1 ]; then
-        warn "--skip-identity-check: not verifying. Jobs will fail if it is missing."
+        warn "--skip-identity-check: skipped"
         return 0
     fi
     local body
     body="$(curl -s -H 'Metadata:true' --max-time 8 "$IMDS_URL" 2>/dev/null || true)"
     case "$body" in
         *access_token*)
-            ok "token received -- the VM can authenticate to Blob Storage as itself"
-            ;;
-        "")
-            die "no response from the instance metadata service.
-       Either this is not an Azure VM, or metadata access is blocked.
-       Ask infra to assign a managed identity to this VM, then re-run." ;;
+            ok "assigned -- you can switch to it with USE_MANAGED_IDENTITY=1 in .env"
+            ok "that is the better long-term option: no key on disk, nothing to rotate" ;;
         *)
-            die "metadata service refused to issue a token:
-       ${body:0:200}
-       Ask infra for a managed identity on this VM, plus:
-         Storage Blob Data Reader      on the input container
-         Storage Blob Data Contributor on the output container" ;;
+            ok "not assigned -- expected for this POC, using the account key instead" ;;
     esac
+}
+
+check_write_credential() {
+    # THE gate that actually matters now. Reads are anonymous so they always work; a missing
+    # key means every job runs the full extraction and then fails at the upload, which wastes
+    # the run and reads like a pipeline bug.
+    head_ "write credential"
+    if grep -q '^AZURE_STORAGE_KEY=.\+' "$ENV_FILE" 2>/dev/null; then
+        ok "AZURE_STORAGE_KEY present in $ENV_FILE"
+    elif [ -n "${AZURE_STORAGE_KEY:-}" ]; then
+        ok "AZURE_STORAGE_KEY present in the environment"
+    else
+        die "no AZURE_STORAGE_KEY.
+
+       Reads are anonymous, so downloads will work -- but every job will fail at the
+       point it uploads its result, after doing all the work.
+
+       Add it to $ENV_FILE:
+           AZURE_STORAGE_KEY=<the 88-character account key>
+
+       Keep the file chmod 600. It must NOT be committed, and it must never be reused
+       as ARIA_API_KEY -- that value is shared with the web app team."
+    fi
 }
 
 make_venv() {
@@ -150,34 +194,45 @@ write_env() {
         ok "$ENV_FILE exists -- left untouched (pass --force to regenerate)"
     else
         [ -f "$ENV_FILE" ] && warn "--force: regenerating; ARIA_API_KEY CHANGES, reshare it"
-        "$PY" - "$ENV_FILE" "$STORAGE_ACCOUNT" <<'PY'
+        "$PY" - "$ENV_FILE" "$STORAGE_ACCOUNT" "${AZURE_STORAGE_KEY:-}" <<'PY'
 import secrets, sys, pathlib
-path, account = sys.argv[1], sys.argv[2]
+path, account, key = sys.argv[1], sys.argv[2], sys.argv[3]
 pathlib.Path(path).write_text(
-    "# Generated on the VM by deploy_vm.sh. NOT from git, NOT committed.\n"
+    "# Generated on the VM by deploy_vm.sh. NOT from git, NOT committed, chmod 600.\n"
     "#\n"
-    "# There is deliberately no AZURE_STORAGE_KEY here: the VM authenticates to Blob\n"
-    "# Storage via its managed identity, so no account key is deployed or rotated.\n"
+    "# POC credential model:\n"
+    "#   reads  -> anonymous. Both containers allow public read; no credential needed.\n"
+    "#   writes -> AZURE_STORAGE_KEY below. Required, or jobs fail at the upload step.\n"
     f"AZURE_STORAGE_ACCOUNT={account}\n"
-    "USE_MANAGED_IDENTITY=1\n"
+    "\n"
+    "# 0 = use the account key (this POC). 1 = use the VM's managed identity, which is the\n"
+    "# better option if it is ever assigned: no key on disk, nothing to rotate.\n"
+    "USE_MANAGED_IDENTITY=0\n"
+    "\n"
+    "# The 88-character storage account key. Needed for UPLOADS only.\n"
+    f"AZURE_STORAGE_KEY={key}\n"
     "\n"
     "# Guards THIS service's /jobs endpoint. Share with the web app team.\n"
-    "# This is NOT the storage account key and must never be set to it.\n"
+    "# This is NOT the storage account key and must never be set to it: this value is\n"
+    "# handed out, and the storage key grants full control of the whole account.\n"
     f"ARIA_API_KEY={secrets.token_urlsafe(32)}\n"
     "\n"
     "LOG_LEVEL=INFO\n"
     "MAX_CONCURRENT_JOBS=2\n"
 )
 PY
+        chmod 600 "$ENV_FILE"
         ok "wrote $ENV_FILE with a fresh ARIA_API_KEY"
+        if [ -z "${AZURE_STORAGE_KEY:-}" ]; then
+            warn "AZURE_STORAGE_KEY was left blank -- fill it in before starting:"
+            warn "    \$EDITOR $ENV_FILE"
+            warn "  or re-run as:  AZURE_STORAGE_KEY=<key> $0 setup --force"
+        else
+            ok "AZURE_STORAGE_KEY taken from the environment"
+        fi
     fi
     chmod 600 "$ENV_FILE"
     ok "permissions 600 (other accounts on this VM cannot read it)"
-
-    if grep -q '^AZURE_STORAGE_KEY=.\+' "$ENV_FILE" 2>/dev/null; then
-        warn "AZURE_STORAGE_KEY is set in $ENV_FILE."
-        warn "It is not needed on a VM with managed identity -- consider removing it."
-    fi
 }
 
 storage_check() {
@@ -307,11 +362,13 @@ next_steps() {
     3. To survive reboot:  loginctl enable-linger \$USER   (then use systemctl --user)
 
   STILL NEEDED FROM THE TEAM
-    4. A Resource Master .xlsx in the input container -- there is currently no .xlsx
-       there at all, so every job fails with "the Resource Master is required".
-    5. run_pipeline() in ai-api-wrapper/aria_pipeline.py is a DUMMY. Until the AI team
+    4. run_pipeline() in ai-api-wrapper/aria_pipeline.py is a DUMMY. Until the AI team
        fills it in, a successful job produces a placeholder workbook, flagged in the
        manifest as "implementation": "DUMMY" with needs_review: true.
+
+  NOT BLOCKERS ANY MORE
+    * managed identity -- not needed; reads are anonymous and writes use the key
+    * Resource Master  -- uploaded to ariallminput/resource-master/Resource Master.xlsx
 EOF
 }
 
@@ -341,6 +398,7 @@ case "$CMD" in
         check_identity
         make_venv
         write_env
+        check_write_credential
         storage_check
         next_steps
         say ""
@@ -357,6 +415,7 @@ case "$CMD" in
         check_identity
         make_venv
         write_env
+        check_write_credential
         storage_check
         start_service
         next_steps

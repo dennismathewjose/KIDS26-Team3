@@ -3,15 +3,34 @@
 The only module here that touches the network. Nothing in it is ARIA-specific, so it should
 not need editing when the AI pipeline is added.
 
+READS ARE ANONYMOUS, WRITES NEED THE ACCOUNT KEY
+------------------------------------------------
+This is a proof of concept. Managed identity will not be granted, so the deployment model is:
+
+    download  ->  no credential at all. Both containers allow anonymous read.
+    upload    ->  AZURE_STORAGE_KEY required.
+
+Verified against the live account:
+
+    GET  ariallminput/...    HTTP 200     anonymous
+    GET  ariallmoutput/...   HTTP 200     anonymous
+    PUT  ariallmoutput/...   HTTP 401     anonymous -> rejected
+
+So a credential is fetched only when writing, and `download()` works with none. A missing key
+therefore fails at the first UPLOAD with a clear message, rather than at startup — the service
+can still start and serve read-only traffic.
+
 CREDENTIAL ORDER
 ----------------
-    1. DefaultAzureCredential   <- production. Managed identity inside Azure.
-    2. AZURE_STORAGE_SAS_TOKEN  <- scoped, expiring; preferred for local dev
-    3. AZURE_STORAGE_KEY        <- full account access; local dev only, last resort
+    1. AZURE_STORAGE_KEY        <- the POC path. Writes.
+    2. AZURE_STORAGE_SAS_TOKEN  <- honoured if set, but not required
+    3. DefaultAzureCredential   <- only when USE_MANAGED_IDENTITY=1
 
-Managed identity is FIRST, not last. A deployed job should never carry a long-lived account
-key: it cannot be rotated without a redeploy, it grants far more than one job needs, and it
-ends up in env dumps and crash logs. `USE_MANAGED_IDENTITY=0` opts out for local runs.
+`USE_MANAGED_IDENTITY` now defaults to **0**. It was 1, which is the right production default,
+but on a VM without an assigned identity the Azure SDK works through nine credential fallbacks
+before failing — an ~80 second hang per operation that reads like a bug in this code. Since the
+identity is not coming, defaulting to it only produces that hang. The code path is kept intact:
+set `USE_MANAGED_IDENTITY=1` and this reverts to the production behaviour with no other change.
 
 No credential value is ever logged. `credential_summary()` returns the mechanism, not the
 secret.
@@ -47,12 +66,16 @@ class BlobAccessError(RuntimeError):
     """A download or upload failed. Carries the blob URL, never the credential."""
 
 
+class WriteCredentialMissing(BlobAccessError):
+    """An upload was attempted with no credential. Reads do not raise this."""
+
+
 @dataclass(frozen=True)
 class BlobConfig:
     account: str = ""
     sas_token: str = ""
     account_key: str = ""
-    use_managed_identity: bool = True
+    use_managed_identity: bool = False     # see the module docstring: default flipped for POC
     timeout_seconds: int = 300
 
     @classmethod
@@ -61,7 +84,9 @@ class BlobConfig:
             account=os.environ.get("AZURE_STORAGE_ACCOUNT", "").strip(),
             sas_token=os.environ.get("AZURE_STORAGE_SAS_TOKEN", "").strip(),
             account_key=os.environ.get("AZURE_STORAGE_KEY", "").strip(),
-            use_managed_identity=os.environ.get("USE_MANAGED_IDENTITY", "1") != "0",
+            # Opt IN to managed identity, rather than opting out. "1" is the only value that
+            # enables it, so a typo leaves the working POC path rather than the hanging one.
+            use_managed_identity=os.environ.get("USE_MANAGED_IDENTITY", "0") == "1",
             timeout_seconds=int(os.environ.get("BLOB_TIMEOUT_SECONDS", "300")),
         )
 
@@ -89,29 +114,37 @@ class BlobStore:
         self._credential, self._mechanism = self._resolve_credential()
 
     def _resolve_credential(self):
+        """(credential, mechanism). Returns (None, 'anonymous') when nothing is configured.
+
+        Deliberately does NOT raise. Anonymous is a valid, working state here -- both
+        containers allow public read -- so refusing to construct would block the read path
+        over a credential only the write path needs.
+        """
         cfg = self.config
+        if cfg.account_key:
+            return cfg.account_key, "account key"
+        if cfg.sas_token:
+            return cfg.sas_token, "SAS token"
         if cfg.use_managed_identity:
             from azure.identity import DefaultAzureCredential
             return DefaultAzureCredential(), "DefaultAzureCredential"
-        if cfg.sas_token:
-            return cfg.sas_token, "SAS token"
-        if cfg.account_key:
-            return cfg.account_key, "account key"
-        raise BlobAccessError(
-            "no credential available: USE_MANAGED_IDENTITY=0 but neither "
-            "AZURE_STORAGE_SAS_TOKEN nor AZURE_STORAGE_KEY is set")
+        return None, "anonymous (read-only)"
 
     def credential_summary(self) -> str:
         """The mechanism in use. Never the secret."""
         return self._mechanism
 
-    def _client(self, url: str) -> BlobClient:
-        """Validate the URL's account, then build a client.
+    def can_write(self) -> bool:
+        """True if uploads are possible. Anonymous access can read but not write."""
+        return self._credential is not None
 
-        A key or SAS is scoped to one account, so a URL naming a different account means the
-        job description and the environment disagree. That is a misconfiguration to stop on,
-        not something to attempt and let fail as an auth error -- the auth error would send
-        whoever is on call looking at permissions instead of at the job payload.
+    def _client(self, url: str, *, write: bool = False) -> BlobClient:
+        """Validate the URL, then build a client. `write=True` demands a credential.
+
+        The account check matters because a key is scoped to one account: a URL naming a
+        different account means the job payload and the environment disagree. Stopping here
+        beats letting it fail as an auth error, which sends whoever is on call looking at
+        permissions instead of at the payload.
         """
         host = urlparse(url).netloc
         named = host.split(".")[0] if host else ""
@@ -121,6 +154,13 @@ class BlobStore:
             raise BlobAccessError(
                 f"blob URL account {named!r} does not match AZURE_STORAGE_ACCOUNT "
                 f"{self.config.account!r}: {url}")
+        if write and self._credential is None:
+            # Raised before the request, not after a 401: the Azure error for an anonymous
+            # write is "AuthenticationFailed", which reads like a wrong key rather than no key.
+            raise WriteCredentialMissing(
+                f"cannot write {url}\n"
+                f"  Reads are anonymous, but uploads need AZURE_STORAGE_KEY.\n"
+                f"  Set it in the environment or in ai-api-wrapper/.env")
         return BlobClient.from_blob_url(url, credential=self._credential)
 
     # ------------------------------------------------------------------ download
@@ -163,7 +203,7 @@ class BlobStore:
         """
         ctype = content_type or CONTENT_TYPES.get(path.suffix.lower())
         try:
-            client = self._client(url)
+            client = self._client(url, write=True)
             with open(path, "rb") as fh:
                 client.upload_blob(
                     fh, overwrite=True,
@@ -177,7 +217,7 @@ class BlobStore:
         import json
         body = json.dumps(payload, indent=2, default=str).encode("utf-8")
         try:
-            client = self._client(url)
+            client = self._client(url, write=True)
             client.upload_blob(
                 body, overwrite=True,
                 content_settings=ContentSettings(content_type="application/json"),
