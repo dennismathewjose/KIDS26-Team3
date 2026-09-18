@@ -308,9 +308,9 @@
 <h1>📄 ARIA AI Template</h1>
 
 <div class="upload-section">
-  <input type="file" id="uploaded_file" accept=".pdf, .doc, .docx, .txt" multiple/>
+  <input type="file" id="uploaded_file" accept=".pdf, .doc, .docx, .txt, .csv, .xlsx" multiple/>
   <div class="drop-zone" id="dropZone">
-    Drop DOC, DOCX, PDF, or TXT files here or click to choose files
+    Drop CSV, DOC, DOCX, PDF, TXT, or XLSX files here or click to choose files
   </div>
   <ul id="selectedFiles" hidden></ul>
   <div class="upload-toolbar">
@@ -338,7 +338,7 @@
   const fileInput = document.getElementById("uploaded_file");
   const dropZone = document.getElementById("dropZone");
   const selectedFilesList = document.getElementById("selectedFiles");
-  const supportedExtensions = [".doc", ".docx", ".pdf", ".txt"];
+  const supportedExtensions = [".doc", ".docx", ".pdf", ".txt", ".csv", ".xlsx"];
   let selectedFiles = [];
 
   function createTreeRow(icon, label, className, onClick, metadata = "", status = "", href = "") {
@@ -382,7 +382,12 @@
   function formatFileDate(timestamp) {
     if (!timestamp) return "";
     const date = new Date(timestamp);
-    return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+    return Number.isNaN(date.getTime())
+      ? ""
+      : date.toLocaleString([], {
+          dateStyle: "short",
+          timeStyle: "short",
+        });
   }
 
   function renderFile(file) {
@@ -555,7 +560,7 @@
     }
 
     statusDiv.style.color = "orange";
-    statusDiv.textContent = `⏳ Processing ${selectedFiles.length} document(s)...`;
+    statusDiv.textContent = `⏳ Uploading ${selectedFiles.length} document(s)...`;
 
     const formData = new FormData();
     for (const file of selectedFiles) {

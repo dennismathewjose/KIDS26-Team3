@@ -87,7 +87,7 @@ app.get("/files", async (req, res) => {
 });
 
 app.post("/upload", (req, res, next) => {
-  upload.array("file", 2)(req, res, (error) => {
+  upload.array("file", 20)(req, res, (error) => {
     if (error) {
       return res.status(400).json({ error: `Upload rejected: ${error.message}` });
     }
