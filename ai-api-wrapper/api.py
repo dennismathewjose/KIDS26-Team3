@@ -82,6 +82,31 @@ from run_job import REQUIRED_FIELDS, handle_job, setup_logging, utc_now   # noqa
 
 log = logging.getLogger("aria.api")
 
+
+def _load_env_file() -> Path | None:
+    """Load a `.env` sitting beside this module, for local development.
+
+    `uvicorn` has no equivalent of run_job.py's `--env-file`, so without this a local `.env`
+    is silently ignored and startup fails claiming ARIA_API_KEY is unset while it is sitting
+    right there in the file. Loading it here removes that trap.
+
+    `override=False`: a real environment variable always wins. In Azure the container's app
+    settings supply everything and no `.env` is deployed, so this is a no-op there.
+    """
+    env_path = Path(__file__).resolve().parent / ".env"
+    if not env_path.is_file():
+        return None
+    try:
+        from dotenv import load_dotenv
+    except ImportError:            # python-dotenv is a local-dev dependency only
+        return None
+    load_dotenv(env_path, override=False)
+    return env_path
+
+
+_ENV_FILE = _load_env_file()
+
+# Read AFTER the .env is loaded, or a value set there would be missed.
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "2"))
 
 app = FastAPI(
@@ -146,6 +171,8 @@ def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
 def on_startup() -> None:
     global _store, _pool
     setup_logging()
+    if _ENV_FILE:
+        log.info("loaded environment from %s", _ENV_FILE)
 
     if not os.environ.get("ARIA_API_KEY"):
         if os.environ.get("ARIA_ALLOW_ANONYMOUS") != "1":
