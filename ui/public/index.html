@@ -197,6 +197,43 @@
       margin-bottom: 12px;
       min-height: 20px;
     }
+    .upload-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border: 0;
+      border-radius: 12px;
+      padding: 24px;
+      width: min(420px, calc(100% - 32px));
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+    }
+    .upload-modal::backdrop {
+      background: rgba(15, 23, 42, 0.45);
+    }
+    .upload-modal h2 {
+      margin-bottom: 10px;
+      color: #1e293b;
+      font-size: 18px;
+    }
+    .upload-modal p {
+      color: #334155;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .upload-modal button {
+      display: block;
+      margin: 18px 0 0 auto;
+      background: #4f46e5;
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      padding: 9px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .upload-modal button:hover { background: #4338ca; }
     #receivedFiles {
       width: 100%;
       max-width: 720px;
@@ -310,7 +347,7 @@
 <div class="upload-section">
   <input type="file" id="uploaded_file" accept=".pdf, .doc, .docx, .txt, .csv, .xlsx" multiple/>
   <div class="drop-zone" id="dropZone">
-    Drop CSV, DOC, DOCX, PDF, TXT, or XLSX files here or click to choose files
+    Drop resource master and AMG files here or click to choose files
   </div>
   <ul id="selectedFiles" hidden></ul>
   <div class="upload-toolbar">
@@ -318,13 +355,19 @@
       Add Files
     </button>
     <button class="btn-upload" type="button" onclick="uploadPDF()">
-      Upload Docs
+      Upload Files
     </button>
   </div>
 </div>
 
 <div id="uploadStatus"></div>
 <ul id="receivedFiles" hidden></ul>
+
+<dialog class="upload-modal" id="uploadCompleteModal" aria-labelledby="uploadCompleteTitle">
+  <h2 id="uploadCompleteTitle">Upload complete</h2>
+  <p id="uploadCompleteMessage"></p>
+  <button type="button" onclick="closeUploadModal()">Close</button>
+</dialog>
 
 <section class="file-browser" aria-labelledby="file-browser-title">
   <div class="file-browser-header">
@@ -552,6 +595,8 @@
 
   async function uploadPDF() {
     const statusDiv = document.getElementById("uploadStatus");
+    const uploadModal = document.getElementById("uploadCompleteModal");
+    const uploadCompleteMessage = document.getElementById("uploadCompleteMessage");
 
     if (!selectedFiles.length) {
       statusDiv.style.color = "red";
@@ -578,7 +623,9 @@
         statusDiv.style.color = "green";
         let completeMsg = data.message || "✅ Upload complete.";
         completeMsg += ' You will receive an email when processing is complete.';
-        statusDiv.textContent = completeMsg;
+        uploadCompleteMessage.textContent = completeMsg;
+        uploadModal.showModal();
+        statusDiv.textContent = "";
         // showReceivedFiles(data.receivedFiles);
         selectedFiles = [];
         // renderSelectedFiles();
@@ -591,6 +638,10 @@
       statusDiv.style.color = "red";
       statusDiv.textContent = "❌ Upload failed.";
     }
+  }
+
+  function closeUploadModal() {
+    document.getElementById("uploadCompleteModal").close();
   }
 
   function showReceivedFiles(files) {
