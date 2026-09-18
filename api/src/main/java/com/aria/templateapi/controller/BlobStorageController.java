@@ -108,8 +108,8 @@ public class BlobStorageController {
             long timestamp = destination.timestampMillis() != null
                     ? destination.timestampMillis() : System.currentTimeMillis();
             try (var template = Files.newInputStream(Path.of(GENERATED_TEMPLATE_SOURCE))) {
-                blobStorageService.upload("output", prefix + "aria_generated_template_" + timestamp + ".xlsx",
-                        template, EXCEL_CONTENT_TYPE, overwrite);
+            blobStorageService.upload("output", prefix + timestampFileName(GENERATED_TEMPLATE_SOURCE, timestamp),
+                template, EXCEL_CONTENT_TYPE, overwrite);
             } catch (IOException | RuntimeException ex) {
                 failed.add(new BatchUploadResult.FailedUpload("aria generated template", ex.getMessage()));
             }
