@@ -1,0 +1,267 @@
+{
+  "info": {
+    "name": "ARIA extraction job",
+    "description": "Submit ARIA extraction jobs to the ai-api-wrapper service.\n\nSETUP\n  1. Start the service:  python -m uvicorn ai-api-wrapper.api:app --port 8001\n  2. Set the collection variable `apiKey` to your ARIA_API_KEY\n     (read it with: python -c \"from dotenv import dotenv_values; print(dotenv_values('ai-api-wrapper/.env')['ARIA_API_KEY'])\")\n\nRUN ORDER\n  Health -> Ready -> Submit job -> Poll job\n  `jobId` is generated fresh by the Submit request's pre-request script, so each run\n  writes to its own output folder and never overwrites a previous result.\n\nIMPORTANT\n  The job needs BOTH an AMG .docx AND a Resource Master .xlsx in the input container.\n  The .docx below already exists. The .xlsx must be uploaded first, or the job fails\n  with: 'no .xlsx among inputs ...; the Resource Master is required'.\n  That failure is correct behaviour, not a bug in the collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8001",
+      "description": "On the VM: http://<vm-public-ip>:8001"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string",
+      "description": "ARIA_API_KEY. NOT the storage account key."
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string",
+      "description": "Set automatically by the Submit request"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "description": "Liveness. No auth, no network, no credential. Safe to poll often.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Ready",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ready",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ready"
+          ]
+        },
+        "description": "Readiness. Reports the credential MECHANISM (never the secret) and current load.\nExpect auth='DefaultAzureCredential' on the VM, 'account key' locally.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('ready', () => pm.expect(j.status).to.eql('ready'));",
+              "console.log('credential mechanism:', j.auth);",
+              "console.log('running', j.running, 'of', j.max_concurrent);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Submit job",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/jobs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "jobs"
+          ]
+        },
+        "description": "The main request. Body is the jobs.json payload.\n\nReturns 202 ACCEPTED immediately \u2014 NOT a result. Extraction runs in the background;\npoll request 4, or read status_url in Blob Storage.\n\nA fresh jobId is generated per run so nothing is overwritten.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"job_id\": \"{{jobId}}\",\n  \"input_urls\": [\n    \"https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789682018392/ARIA%20Guide%20NBL%20AMG%20Final%20Draft%20EN_UF%203%20MAR%202026%20kb%20-%20Copy%20Biohackathon%207%20AUG%202026_1789682018392.docx\",\n    \"https://sabiohackteam3.blob.core.windows.net/ariallminput/resource-master/Resource%20Master.xlsx\"\n  ],\n  \"output_url\": \"https://sabiohackteam3.blob.core.windows.net/ariallmoutput/{{jobId}}/output.json\",\n  \"email_url\": \"https://sabiohackteam3.blob.core.windows.net/ariallmoutput/{{jobId}}/status.json\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('202 Accepted', () => pm.response.to.have.status(202));",
+              "const j = pm.response.json();",
+              "pm.test('ACCEPTED', () => pm.expect(j.status).to.eql('ACCEPTED'));",
+              "pm.test('echoes jobId', () => pm.expect(j.job_id).to.eql(pm.collectionVariables.get('jobId')));",
+              "pm.test('returns status_url', () => pm.expect(j.status_url).to.include('status.json'));",
+              "console.log('poll:', j.poll_url);",
+              "console.log('durable status blob:', j.status_url);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Poll job",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/jobs/{{jobId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "jobs",
+            "{{jobId}}"
+          ]
+        },
+        "description": "In-memory state for a job THIS process accepted. Lost on restart \u2014\nstatus.json in Blob Storage is the durable answer.\n\nQUEUED -> RUNNING -> SUCCEEDED | FAILED",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "console.log('status:', j.status, '| exit_code:', j.exit_code);",
+              "if (j.detail) console.log('detail:', j.detail);",
+              "pm.test('reached a terminal state', () =>",
+              "  pm.expect(['SUCCEEDED','FAILED','RUNNING','QUEUED']).to.include(j.status));",
+              "if (j.status === 'RUNNING' || j.status === 'QUEUED') {",
+              "  console.log('still working \u2014 re-send this request in a few seconds');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Auth check (expect 401)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/jobs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "jobs"
+          ]
+        },
+        "description": "Negative test: the same body with no API key must be rejected.\nConfirms the endpoint is not open \u2014 it is reachable on a public IP.",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"job_id\": \"{{jobId}}\",\n  \"input_urls\": [\n    \"https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789682018392/ARIA%20Guide%20NBL%20AMG%20Final%20Draft%20EN_UF%203%20MAR%202026%20kb%20-%20Copy%20Biohackathon%207%20AUG%202026_1789682018392.docx\",\n    \"https://sabiohackteam3.blob.core.windows.net/ariallminput/resource-master/Resource%20Master.xlsx\"\n  ],\n  \"output_url\": \"https://sabiohackteam3.blob.core.windows.net/ariallmoutput/{{jobId}}/output.json\",\n  \"email_url\": \"https://sabiohackteam3.blob.core.windows.net/ariallmoutput/{{jobId}}/status.json\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 without a key', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Fresh job id per run: uploads use overwrite=true, so reusing an id would",
+          "// replace a previous run's output.json and status.json.",
+          "if (pm.info.requestName && pm.info.requestName.indexOf('Submit') === 0) {",
+          "  const stamp = new Date().toISOString().slice(0,10).replace(/-/g,'');",
+          "  pm.collectionVariables.set('jobId', `postman-${stamp}-${Date.now()}`);",
+          "}",
+          "if (!pm.collectionVariables.get('apiKey')) {",
+          "  console.warn('apiKey is empty \u2014 Submit will return 401. Set the collection variable.');",
+          "}"
+        ]
+      }
+    }
+  ]
+}
