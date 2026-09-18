@@ -3,11 +3,26 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ARIA AI Template</title>
+  <!-- <title>ARIA AI Template</title> -->
+  <title>BioHackathon - Team 3</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      /* size scale — change these to retune the whole page */
+      --fs-h1: 23.5px;
+      --fs-h2: 15.5px;
+      --fs-body: 14.5px;
+      --fs-sm: 13px;
+      --fs-xs: 12px;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, button, input, textarea, select {
+      font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+      font-size: var(--fs-body);
+    }
     body {
-      font-family: 'Segoe UI', sans-serif;
       background: #f0f2f5;
       display: flex;
       flex-direction: column;
@@ -16,13 +31,13 @@
       padding: 30px 20px;
     }
     h1 {
-      font-size: 26px;
+      font-size: var(--fs-h1);
       margin-bottom: 20px;
       color: #1a1a2e;
     }
     .file-browser {
       width: 100%;
-      max-width: 720px;
+      max-width: 980px;
       margin-bottom: 16px;
       background: white;
       border-radius: 12px;
@@ -37,21 +52,28 @@
       border-bottom: 1px solid #e2e8f0;
     }
     .file-browser-header h2 {
-      font-size: 16px;
+      font-size: var(--fs-h2);
       color: #1e293b;
     }
     .tree-status {
       color: #64748b;
-      font-size: 13px;
+      font-size: var(--fs-sm);
     }
     .file-tree {
       padding: 10px 14px 14px;
     }
     .tree-list {
       list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     .tree-list .tree-list {
       margin-left: 22px;
+      gap: 4px;
+    }
+    .tree-list > li > .folder-row + .tree-list {
+      margin-top: 6px;
     }
     .tree-row {
       display: flex;
@@ -59,7 +81,7 @@
       gap: 8px;
       width: 100%;
       min-height: 36px;
-      padding: 6px 8px;
+      padding: 8px 10px;
       border: 0;
       border-radius: 6px;
       background: transparent;
@@ -67,8 +89,37 @@
       text-align: left;
       font: inherit;
     }
+    .folder-row {
+      background: transparent;
+      border: 0;
+    }
+    .file-tree > .tree-list > li > .folder-row {
+      background: #fafafa;
+      border-top: 1.3px solid #e8e8e8;
+      /*border-bottom: 1px solid #e6e6e6;*/
+      min-height: 56px;
+      padding-left: 14px;
+      padding-right: 14px;
+      margin-bottom: 8px;
+    }
+    .tree-list .tree-list > li > .folder-row {
+      min-height: 34px;
+      background: transparent;
+      border-top: 0;
+      border-bottom: 0;
+      margin: 0;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    .tree-list > li > .tree-list > li:first-child > .folder-row {
+      margin-top: 4px;
+    }
+    .tree-list > li > .tree-list > li:last-child > .folder-row {
+      margin-bottom: 4px;
+    }
     button.tree-row { cursor: pointer; }
     button.tree-row:hover { background: #f1f5f9; }
+    button.folder-row:hover { background: #f1f5f9; }
     .tree-icon {
       width: 18px;
       color: #64748b;
@@ -76,31 +127,42 @@
       flex: 0 0 18px;
     }
     .folder-name, .file-name { overflow-wrap: anywhere; }
+    .folder-name {
+      color: #606367;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-weight: 600;
+    }
+    .tree-list .tree-list .folder-name {
+      color: #9a9a9a;
+    }
     .file-name { color: #1e40af; }
     .file-date {
       margin-left: auto;
-      color: #94a3b8;
-      font-size: 12px;
+      color: #979797;
+      font-size: var(--fs-xs);
       white-space: nowrap;
     }
     .file-status {
       padding: 2px 7px;
       border-radius: 999px;
-      background: #dcfce7;
-      color: #166534;
-      font-size: 11px;
+      background: #e0e7ff;
+      color: #3730a3;
+      font-size: var(--fs-xs);
       white-space: nowrap;
+      border: 1px solid #c7d2fe;
     }
     .file-status.failed {
-      background: #fee2e2;
-      color: #991b1b;
+      background: #f3e8ff;
+      color: #7c3aed;
+      border-color: #ddd6fe;
     }
     .file-attributes {
       margin: 0 0 6px 44px;
       padding: 6px 10px;
       border-left: 1px solid #cbd5e1;
       list-style: none;
-      font-size: 12px;
+      font-size: var(--fs-sm);
     }
     .file-attribute {
       display: grid;
@@ -122,9 +184,31 @@
     .tree-empty, .tree-error {
       padding: 20px 8px;
       color: #64748b;
-      font-size: 14px;
+      font-size: var(--fs-body);
     }
     .tree-error { color: #b91c1c; }
+    .processing-state {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 8px;
+      color: #888888;
+      font-size: var(--fs-sm);
+      line-height: 1.4;
+      margin-bottom:12px;
+    }
+    .processing-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2.5px solid #E8E8E8;
+      border-top-color: #fda61a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
     .upload-section {
       background: white;
       padding: 16px 24px;
@@ -136,22 +220,37 @@
       gap: 12px;
       margin-bottom: 12px;
       width: 100%;
-      max-width: 720px;
+      max-width: 980px;
     }
     .upload-toolbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      width: 100%;
+    }
+    .upload-hint {
+      color: #64748b;
+      font-size: var(--fs-sm);
+      line-height: 1.4;
+      min-height: 20px;
+    }
+    .upload-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
     }
     .upload-section input[type="file"] { display: none; }
     .drop-zone {
       border: 2px dashed #cbd5e1;
       border-radius: 8px;
-      padding: 22px;
+      padding: 30px 22px;
       text-align: center;
       color: #64748b;
       cursor: pointer;
+      min-height: 80px;
     }
     .drop-zone:hover, .drop-zone.dragging {
       border-color: #4f46e5;
@@ -182,16 +281,32 @@
       font-size: 13px;
     }
     .btn-upload {
-      background: #4f46e5;
-      color: white;
       border: none;
       padding: 10px 20px;
       border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
+      transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
     }
-    .btn-upload:hover { background: #4338ca; }
+    .btn-upload:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-upload.secondary {
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+    .btn-upload.secondary:hover:not(:disabled) {
+      background: #e0e7ff;
+    }
+    .btn-upload.primary {
+      background: #4f46e5;
+      color: white;
+    }
+    .btn-upload.primary:hover:not(:disabled) { background: #4338ca; }
     #uploadStatus {
       font-size: 14px;
       margin-bottom: 12px;
@@ -236,7 +351,7 @@
     .upload-modal button:hover { background: #4338ca; }
     #receivedFiles {
       width: 100%;
-      max-width: 720px;
+      max-width: 980px;
       margin: 0 0 16px;
       padding-left: 24px;
       color: #334155;
@@ -247,7 +362,7 @@
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       width: 100%;
-      max-width: 720px;
+      max-width: 980px;
       display: flex;
       flex-direction: column;
       height: 520px;
@@ -342,7 +457,8 @@
 </head>
 <body>
 
-<h1>📄 ARIA AI Template</h1>
+<!-- <h1>📄 ARIA AI Template</h1> -->
+ <h1>BioHackathon - Team 3</h1>
 
 <div class="upload-section">
   <input type="file" id="uploaded_file" accept=".pdf, .doc, .docx, .txt, .csv, .xlsx" multiple/>
@@ -351,12 +467,15 @@
   </div>
   <ul id="selectedFiles" hidden></ul>
   <div class="upload-toolbar">
-    <button class="btn-upload" type="button" onclick="chooseFiles()">
-      Add Files
-    </button>
-    <button class="btn-upload" type="button" onclick="uploadPDF()">
-      Upload Files
-    </button>
+    <div class="upload-hint" id="uploadHint">No files selected yet</div>
+    <div class="upload-actions">
+      <button class="btn-upload secondary" type="button" onclick="chooseFiles()">
+        Add Files
+      </button>
+      <button class="btn-upload primary" id="uploadButton" type="button" onclick="uploadPDF()" disabled>
+        Upload Files
+      </button>
+    </div>
   </div>
 </div>
 
@@ -464,6 +583,18 @@
       for (const file of files) {
         children.appendChild(renderFile(file));
       }
+    } else if (groupName === "Output files") {
+      const processingItem = document.createElement("li");
+      processingItem.className = "processing-state";
+
+      const spinner = document.createElement("span");
+      spinner.className = "processing-spinner";
+
+      const message = document.createElement("span");
+      message.textContent = "Processing — you'll get an email once this is ready.";
+
+      processingItem.append(spinner, message);
+      children.appendChild(processingItem);
     } else {
       const emptyItem = document.createElement("li");
       emptyItem.className = "tree-empty";
@@ -559,6 +690,16 @@
     renderSelectedFiles();
   }
 
+  function updateUploadButtonState() {
+    const uploadButton = document.getElementById("uploadButton");
+    const uploadHint = document.getElementById("uploadHint");
+    const hasFiles = selectedFiles.length > 0;
+
+    uploadButton.disabled = !hasFiles;
+    uploadHint.textContent = hasFiles ? `${selectedFiles.length} file(s) selected` : "No files selected yet";
+    uploadHint.style.color = hasFiles ? "#1e293b" : "#64748b";
+  }
+
   function renderSelectedFiles() {
     selectedFilesList.replaceChildren();
     selectedFilesList.hidden = selectedFiles.length === 0;
@@ -574,10 +715,13 @@
       removeButton.onclick = () => {
         selectedFiles.splice(index, 1);
         renderSelectedFiles();
+        updateUploadButtonState();
       };
       item.append(name, removeButton);
       selectedFilesList.appendChild(item);
     });
+
+    updateUploadButtonState();
   }
 
   fileInput.addEventListener("change", () => addFiles(fileInput.files));
