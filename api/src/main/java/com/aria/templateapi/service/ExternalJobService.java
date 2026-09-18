@@ -1,6 +1,7 @@
 package com.aria.templateapi.service;
 
 import com.aria.templateapi.config.ExternalJobProperties;
+import com.aria.templateapi.model.BatchUploadResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +40,21 @@ public class ExternalJobService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("x-api-key", properties.getApiKey())
                 .body(request)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    public void notifyUpload(BatchUploadResult result) {
+        if (!StringUtils.hasText(properties.getEmailUrl())) {
+            throw new IllegalStateException("External job email URL is not configured");
+        }
+
+        log.info("Calling email webhook for upload result: container={}, folder={}, uploaded={}, failed={}",
+                result.container(), result.folder(), result.uploaded().size(), result.failed().size());
+        restClient.post()
+            .uri(URI.create(properties.getEmailUrl()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(result)
                 .retrieve()
                 .toBodilessEntity();
     }

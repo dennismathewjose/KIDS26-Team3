@@ -71,6 +71,7 @@ public class BlobStorageController {
 
         List<BlobEntry> uploaded = new ArrayList<>();
         List<BatchUploadResult.FailedUpload> failed = new ArrayList<>();
+        BlobEntry resourceMaster = null;
 
         for (MultipartFile file : files) {
             String fileName = leafName(file.getOriginalFilename());
@@ -88,13 +89,28 @@ public class BlobStorageController {
             }
             try (var in = file.getInputStream()) {
                 String targetPath = prefix + timestampFileName(fileName, destination.timestampMillis());
-                uploaded.add(blobStorageService.upload(target.alias(), targetPath, in,
-                        file.getContentType(), overwrite));
+                BlobEntry uploadedEntry = blobStorageService.upload(target.alias(), targetPath, in,
+                        file.getContentType(), overwrite);
+                uploaded.add(uploadedEntry);
+                if (FileTypes.ResourceMaster.isContainedIn(fileName)) {
+                    resourceMaster = uploadedEntry;
+                }
             } catch (IOException | RuntimeException ex) {
                 failed.add(new BatchUploadResult.FailedUpload(fileName, ex.getMessage()));
             }
         }
-         
+
+        if (failed.isEmpty() && resourceMaster != null) {
+            long timestamp = destination.timestampMillis() != null
+                    ? destination.timestampMillis() : System.currentTimeMillis();
+            try {
+                blobStorageService.copy(target.alias(), resourceMaster.path(), "output",
+                        prefix + "aria_generated_template_" + timestamp + ".xlsx", overwrite);
+            } catch (RuntimeException ex) {
+                failed.add(new BatchUploadResult.FailedUpload("aria generated template", ex.getMessage()));
+            }
+        }
+        /* 
         if (failed.isEmpty()) {
             try {
                 List<String> inputUrls = uploaded.stream()
@@ -106,9 +122,22 @@ public class BlobStorageController {
                 failed.add(new BatchUploadResult.FailedUpload("external job", ex.getMessage()));
             }
         }
+
+        */
         
         BatchUploadResult result = new BatchUploadResult(target.alias(), target.containerName(), prefix,
                 files.length, uploaded, failed);
+        /*
+        if (failed.isEmpty()) {
+            try {
+                externalJobService.notifyUpload(result);
+            } catch (RuntimeException ex) {
+                failed.add(new BatchUploadResult.FailedUpload("email notification", ex.getMessage()));
+                result = new BatchUploadResult(target.alias(), target.containerName(), prefix,
+                        files.length, uploaded, failed);
+            }
+        }
+        */
         return ResponseEntity.status(failed.isEmpty() ? HttpStatus.CREATED : HttpStatus.MULTI_STATUS).body(result);
     }
 

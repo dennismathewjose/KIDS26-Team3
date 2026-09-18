@@ -177,6 +177,21 @@ public class BlobStorageService {
         return blobClient(container, path).getBlobUrl();
     }
 
+    public BlobEntry copy(String sourceContainer, String sourcePath, String destinationContainer, String destinationPath,
+                          boolean overwrite) {
+        BlobClient source = blobClient(sourceContainer, sourcePath);
+        if (Boolean.FALSE.equals(source.exists())) {
+            throw new BlobNotFoundException("Blob not found: " + sourcePath);
+        }
+
+        try (InputStream content = source.openInputStream()) {
+            return upload(destinationContainer, destinationPath, content,
+                    source.getProperties().getContentType(), overwrite);
+        } catch (java.io.IOException ex) {
+            throw new IllegalStateException("Could not copy blob: " + sourcePath, ex);
+        }
+    }
+
     public BlobEntry createFolder(String container, String folderPath) {
         ResolvedContainer resolved = requireWritable(container);
         String normalised = normalisePrefix(folderPath);

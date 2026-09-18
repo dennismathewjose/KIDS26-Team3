@@ -13,8 +13,11 @@ public enum FileTypes {
         this.displayName = displayName;
     }
 
-        public static boolean contains(String fileName) {
-            return Arrays.stream(values()).anyMatch(fileType ->
-                fileName.toLowerCase(Locale.ROOT).contains(fileType.displayName.toLowerCase(Locale.ROOT)));
+    public boolean isContainedIn(String fileName) {
+        return fileName.toLowerCase(Locale.ROOT).contains(displayName.toLowerCase(Locale.ROOT));
+    }
+
+    public static boolean contains(String fileName) {
+        return Arrays.stream(values()).anyMatch(fileType -> fileType.isContainedIn(fileName));
     }
 }
