@@ -68,6 +68,7 @@
       flex-direction: column;
       gap: 4px;
     }
+    .tree-list[hidden] { display: none !important; }
     .tree-list .tree-list {
       margin-left: 22px;
       gap: 4px;
@@ -577,7 +578,9 @@
       const isOpen = !children.hidden;
       children.hidden = isOpen;
       groupRow.querySelector(".tree-icon").textContent = isOpen ? "▸" : "▾";
+      groupRow.setAttribute("aria-expanded", String(!isOpen));
     });
+    groupRow.setAttribute("aria-expanded", "true");
 
     if (files.length) {
       for (const file of files) {
@@ -617,7 +620,9 @@
       const isOpen = !children.hidden;
       children.hidden = isOpen;
       folderRow.querySelector(".tree-icon").textContent = isOpen ? "▸" : "▾";
+      folderRow.setAttribute("aria-expanded", String(!isOpen));
     }, formatFileDate(folder.folderdate), `${inputFiles.length + outputFiles.length} file(s)`);
+    folderRow.setAttribute("aria-expanded", "true");
     item.append(folderRow, children);
 
     children.appendChild(renderFileGroup("Input files", inputFiles));
