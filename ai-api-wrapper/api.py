@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """HTTP front end for the ARIA extraction job.
 
-    uvicorn scripts.api:app --host 0.0.0.0 --port 8000
-    uvicorn scripts.api:app --reload --port 8000        # local development
+    # from the REPO ROOT -- the argument is a module path, so dots, not slashes
+    python -m uvicorn ai-api-wrapper.api:app --host 0.0.0.0 --port 8001
+    python -m uvicorn ai-api-wrapper.api:app --reload --port 8001    # local development
+
+    # or let the deploy script handle it
+    ./ai-api-wrapper/deploy_vm.sh start
 
     POST /jobs      submit a job. Returns 202 ACCEPTED immediately.
     GET  /jobs/{id} what happened to a job this process accepted
