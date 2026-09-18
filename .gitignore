@@ -161,4 +161,6 @@ dennis/
 # Live API keys — never commit
 config/
 config/config.json
+!api/src/main/java/com/aria/templateapi/config/
+!api/src/main/java/com/aria/templateapi/config/*.java
 fewshot.sh
