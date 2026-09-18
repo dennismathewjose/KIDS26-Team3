@@ -38,6 +38,18 @@ async function removeUploadedFiles(files) {
   );
 }
 
+async function clearUploadsDirectory() {
+  const uploadDirectory = "uploads";
+  await fs.promises.mkdir(uploadDirectory, { recursive: true });
+  const entries = await fs.promises.readdir(uploadDirectory, { withFileTypes: true });
+
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => fs.promises.unlink(`${uploadDirectory}/${entry.name}`))
+  );
+}
+
 function getReceivedFiles(responseBody) {
   const candidates = [
     responseBody?.receivedFiles,
@@ -159,6 +171,9 @@ app.post("/upload", (req, res, next) => {
 });
 
 const port = process.env.PORT || 8080;
+
+await clearUploadsDirectory();
+console.log("🧹 Cleared uploads directory.");
 
 app.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);
