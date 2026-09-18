@@ -1,0 +1,55 @@
+# ai-api-wrapper — the ARIA extraction job service
+#
+#     python -m pip install -r ai-api-wrapper/requirements.txt
+#
+# Needs Python 3.10+. FastAPI resolves `str | None` parameter annotations at runtime, so 3.9
+# and below fail on import — not at install time, which makes it a confusing error. RHEL and
+# CentOS ship 3.6 as the system python3; deploy_vm.sh checks the version and explains how to
+# get a newer one without root.
+#
+# Lower bounds are the versions this was actually verified against, not guesses. Upper bounds
+# are only on packages whose majors have broken things before.
+
+
+# ── Azure Blob Storage ───────────────────────────────────────────────────────
+# Reads are anonymous (both containers allow public read); the account key is needed only for
+# uploads. See blob_io.py.
+azure-storage-blob>=12.30,<13      # BlobClient, ContentSettings
+azure-core>=1.41                   # AzureError — caught explicitly in blob_io
+                                   # (a dependency of the above, pinned because we import it)
+
+# Managed identity. NOT used by the POC (USE_MANAGED_IDENTITY defaults to 0), but the code
+# path is intact and imported lazily, so the package must be present or switching to identity
+# fails at runtime rather than at install.
+azure-identity>=1.25,<2
+
+# ── HTTP service ─────────────────────────────────────────────────────────────
+fastapi>=0.141,<1                  # api.py
+uvicorn[standard]>=0.53,<1         # the ASGI server. Not imported — invoked as
+                                   # `python -m uvicorn ai-api-wrapper.api:app`
+pydantic>=2.13,<3                  # JobRequest / JobAccepted models. Ships with fastapi, but
+                                   # pinned because api.py imports it directly, and v1 vs v2
+                                   # differ enough to break `model_dump` / `model_config`.
+
+# ── Workbooks ────────────────────────────────────────────────────────────────
+openpyxl>=3.1                      # writes the .xlsx artifact
+
+# ── Configuration ────────────────────────────────────────────────────────────
+# Loads ai-api-wrapper/.env. Required, not optional: api.py auto-loads that file at import,
+# and run_job.py's --env-file depends on it. Both degrade gracefully if it is absent, which
+# means a missing install shows up as "ARIA_API_KEY is not set" while the key sits in the
+# file — so keep it installed.
+python-dotenv>=1.0
+
+
+# ── Not yet needed ───────────────────────────────────────────────────────────
+# Uncomment as the extension points in aria_pipeline.py are implemented.
+#
+# EXTENSION POINT 2 — model keys from Key Vault rather than environment variables:
+# azure-keyvault-secrets>=4.8
+#
+# EXTENSION POINT 1 — the extraction itself. The AI team should add whatever they need here
+# and say so, so the deployed container installs it:
+# python-docx>=1.1                 # AMG .docx parsing
+# pandas>=2.2                      # tabular work
+# anthropic>=1.6                   # or whichever approved model SDK

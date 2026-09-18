@@ -155,7 +155,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .myenv/
-requirements.txt
 
 #Testing folder
 dennis/
