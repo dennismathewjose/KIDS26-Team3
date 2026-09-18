@@ -8,6 +8,7 @@ COPY settings.gradle build.gradle gradle.properties ./
 RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 
 COPY src src
+COPY "Data NBL Template for Biohackathon 1 SEP 2026_KS.xlsx" ./
 RUN ./gradlew bootJar --no-daemon
 
 FROM mcr.microsoft.com/openjdk/jdk:21-distroless
@@ -16,6 +17,7 @@ LABEL maintainer="Researchinformationservices@stjude.org"
 
 WORKDIR /app
 COPY --from=build /workspace/build/libs/*.jar app.jar
+COPY --from=build "/workspace/Data NBL Template for Biohackathon 1 SEP 2026_KS.xlsx" ./
 
 EXPOSE 80
 

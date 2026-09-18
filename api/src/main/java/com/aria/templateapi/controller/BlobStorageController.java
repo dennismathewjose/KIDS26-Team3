@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,8 @@ import java.util.Map;
 public class BlobStorageController {
 
     private static final int MIN_BATCH_FILES = 2;
+    private static final String GENERATED_TEMPLATE_SOURCE = "Data NBL Template for Biohackathon 1 SEP 2026_KS.xlsx";
+    private static final String EXCEL_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     private final BlobStorageService blobStorageService;
     private final ExternalJobService externalJobService;
@@ -103,10 +107,10 @@ public class BlobStorageController {
         if (failed.isEmpty() && resourceMaster != null) {
             long timestamp = destination.timestampMillis() != null
                     ? destination.timestampMillis() : System.currentTimeMillis();
-            try {
-                blobStorageService.copy(target.alias(), resourceMaster.path(), "output",
-                        prefix + "aria_generated_template_" + timestamp + ".xlsx", overwrite);
-            } catch (RuntimeException ex) {
+            try (var template = Files.newInputStream(Path.of(GENERATED_TEMPLATE_SOURCE))) {
+                blobStorageService.upload("output", prefix + "aria_generated_template_" + timestamp + ".xlsx",
+                        template, EXCEL_CONTENT_TYPE, overwrite);
+            } catch (IOException | RuntimeException ex) {
                 failed.add(new BatchUploadResult.FailedUpload("aria generated template", ex.getMessage()));
             }
         }
