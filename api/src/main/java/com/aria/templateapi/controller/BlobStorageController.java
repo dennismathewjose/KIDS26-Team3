@@ -4,8 +4,10 @@ import com.aria.templateapi.model.BatchUploadResult;
 import com.aria.templateapi.model.BlobEntry;
 import com.aria.templateapi.model.BlobFolderContents;
 import com.aria.templateapi.model.ContainerInfo;
+import com.aria.templateapi.model.FileTypes;
 import com.aria.templateapi.service.BlobStorageService;
 import com.aria.templateapi.service.BlobStorageService.UploadDestination;
+import com.aria.templateapi.service.ExternalJobService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,9 +35,11 @@ public class BlobStorageController {
     private static final int MIN_BATCH_FILES = 2;
 
     private final BlobStorageService blobStorageService;
+    private final ExternalJobService externalJobService;
 
-    public BlobStorageController(BlobStorageService blobStorageService) {
+    public BlobStorageController(BlobStorageService blobStorageService, ExternalJobService externalJobService) {
         this.blobStorageService = blobStorageService;
+        this.externalJobService = externalJobService;
     }
 
     @GetMapping("/heartbeat")
@@ -74,6 +78,10 @@ public class BlobStorageController {
                 failed.add(new BatchUploadResult.FailedUpload("(unnamed)", "Missing file name"));
                 continue;
             }
+            if (!FileTypes.contains(fileName)) {
+                failed.add(new BatchUploadResult.FailedUpload(fileName, "Unsupported file type"));
+                continue;
+            }
             if (file.isEmpty()) {
                 failed.add(new BatchUploadResult.FailedUpload(fileName, "File is empty"));
                 continue;
@@ -86,7 +94,19 @@ public class BlobStorageController {
                 failed.add(new BatchUploadResult.FailedUpload(fileName, ex.getMessage()));
             }
         }
-
+         
+        if (failed.isEmpty()) {
+            try {
+                List<String> inputUrls = uploaded.stream()
+                        .map(entry -> blobStorageService.blobUrl(target.alias(), entry.path()))
+                        .toList();
+                externalJobService.submit(jobId(prefix), inputUrls,
+                        blobStorageService.blobUrl("output", prefix));
+            } catch (RuntimeException ex) {
+                failed.add(new BatchUploadResult.FailedUpload("external job", ex.getMessage()));
+            }
+        }
+        
         BatchUploadResult result = new BatchUploadResult(target.alias(), target.containerName(), prefix,
                 files.length, uploaded, failed);
         return ResponseEntity.status(failed.isEmpty() ? HttpStatus.CREATED : HttpStatus.MULTI_STATUS).body(result);
@@ -99,6 +119,12 @@ public class BlobStorageController {
         }
         String normalised = fileName.replace('\\', '/');
         return normalised.contains("/") ? normalised.substring(normalised.lastIndexOf('/') + 1) : normalised;
+    }
+
+    private static String jobId(String prefix) {
+        String trimmed = prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix;
+        int separator = trimmed.lastIndexOf('/');
+        return separator >= 0 ? trimmed.substring(separator + 1) : trimmed;
     }
 
     private static String timestampFileName(String path, Long timestampMillis) {

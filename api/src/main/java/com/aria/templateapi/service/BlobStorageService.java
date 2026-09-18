@@ -173,6 +173,10 @@ public class BlobStorageService {
         return toFileEntry(blobClient.getBlobName(), blobClient.getProperties());
     }
 
+    public String blobUrl(String container, String path) {
+        return blobClient(container, path).getBlobUrl();
+    }
+
     public BlobEntry createFolder(String container, String folderPath) {
         ResolvedContainer resolved = requireWritable(container);
         String normalised = normalisePrefix(folderPath);

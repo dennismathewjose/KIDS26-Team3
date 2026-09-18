@@ -35,6 +35,11 @@ azure:
       staging:
         name: ${AZURE_STAGING_CONTAINER_NAME:stagingcontainer}
 
+external-job:
+  url: ${EXTERNAL_JOB_URL:}
+  api-key: ${EXTERNAL_JOB_API_KEY:}
+  email-url: ${EXTERNAL_JOB_EMAIL_URL:}
+
 logging:
   level:
     com.azure.core: WARN
