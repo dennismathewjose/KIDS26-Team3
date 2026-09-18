@@ -1,0 +1,9 @@
+{
+  "job_id": "20260917_1789680857222",
+  "input_urls": [
+    "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675465445%2Fremote-batch-alpha_1789675465445.txt",
+    "https://sabiohackteam3.blob.core.windows.net/ariallminput/20260917_1789675465445%2Fremote-batch-beta_1789675465445.csv"
+  ],
+  "output_url": "https://sabiohackteam3.blob.core.windows.net/ariallmoutput/20260917_1789680857222/output.json",
+  "email_url": "https://sabiohackteam3.blob.core.windows.net/ariallmoutput/20260917_1789680857222/status.json"
+}
