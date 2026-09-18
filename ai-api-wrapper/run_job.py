@@ -227,6 +227,8 @@ def check_only(job: dict, store: BlobStore) -> int:
     log.info("check: job %s", job["job_id"])
     log.info("check: auth %s", store.credential_summary())
     ok = True
+
+    # Reads are anonymous, so these succeed with no credential at all.
     for url in job["input_urls"]:
         try:
             props = store._client(url).get_blob_properties()
@@ -235,13 +237,23 @@ def check_only(job: dict, store: BlobStore) -> int:
         except Exception as exc:                              # noqa: BLE001
             log.error("check: UNREADABLE %s -- %s", blob_filename(url), exc)
             ok = False
-    for field in ("output_url", "email_url"):
-        try:
-            store._client(job[field])
-            log.info("check: writable target accepted for %s", field)
-        except Exception as exc:                              # noqa: BLE001
-            log.error("check: %s rejected -- %s", field, exc)
-            ok = False
+
+    # Writes need the account key. Asking with write=True surfaces a missing key HERE,
+    # during a check that writes nothing, instead of two minutes into a real job after the
+    # extraction has already run.
+    if not store.can_write():
+        log.error("check: NO WRITE CREDENTIAL -- reads work, but every job will fail when it "
+                  "uploads its result. Set AZURE_STORAGE_KEY.")
+        ok = False
+    else:
+        for field in ("output_url", "email_url"):
+            try:
+                store._client(job[field], write=True)
+                log.info("check: writable target accepted for %s", field)
+            except Exception as exc:                          # noqa: BLE001
+                log.error("check: %s rejected -- %s", field, exc)
+                ok = False
+
     log.info("check: %s", "OK" if ok else "PROBLEMS FOUND")
     return EXIT_OK if ok else EXIT_FAILED
 
