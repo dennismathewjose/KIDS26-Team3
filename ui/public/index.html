@@ -576,7 +576,9 @@
 
       if (res.ok) {
         statusDiv.style.color = "green";
-        statusDiv.textContent = data.message || "✅ Upload complete.";
+        let completeMsg = data.message || "✅ Upload complete.";
+        completeMsg += ' You will receive an email when processing is complete.';
+        statusDiv.textContent = completeMsg;
         // showReceivedFiles(data.receivedFiles);
         selectedFiles = [];
         // renderSelectedFiles();
